@@ -359,8 +359,19 @@ def main():
     out_dir = os.environ.get('MAKEFUN_OUTPUT_DIR', '/output')
     os.makedirs(out_dir, exist_ok=True)
     data = png_bytes(build())
-    with open(os.path.join(out_dir, 'entry.png'), 'wb') as f:
+    path = os.path.join(out_dir, 'entry.png')
+    with open(path, 'wb') as f:
         f.write(data)
+    # Self-check the file we just wrote: a corrupt or wrong-sized PNG
+    # would score zero in the grader, so fail loudly instead of
+    # exiting 0 with a bad image on disk.
+    with open(path, 'rb') as f:
+        head = f.read(33)
+    assert head[:8] == b'\x89PNG\r\n\x1a\n', 'bad PNG signature'
+    assert head[12:16] == b'IHDR', 'missing IHDR chunk'
+    w, h = struct.unpack('>II', head[16:24])
+    assert (w, h) == (W, H), f'unexpected size {w}x{h}'
+    print(f'wrote {path} ({W}x{H}, {len(data)} bytes)')
 
 
 if __name__ == '__main__':
